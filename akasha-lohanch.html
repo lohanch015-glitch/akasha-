@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Akasha Lohanch — Card Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;1,9..144,500&family=Manrope:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,700;1,500&family=Inter:wght@400;500;600&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Space+Mono:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void: #0b0e1a;
+    --void-2: #12162b;
+    --void-3: #191f3a;
+    --mist: #c9cde0;
+    --mist-dim: #7b7fa0;
+    --violet: #8b7cf6;
+    --teal: #2dd4bf;
+    --gold: #e8b84b;
+    --hairline: rgba(201,205,224,0.14);
+
+    --font-display: 'Fraunces', serif;
+    --font-body: 'Manrope', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  *{ box-sizing: border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    background: var(--void);
+    color: var(--mist);
+    font-family: var(--font-body);
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  #stars{
+    position:fixed; inset:0; width:100%; height:100%;
+    z-index:0; pointer-events:none;
+  }
+
+  a, button, input, textarea, select{ font-family: inherit; }
+
+  /* ---------- layout shell ---------- */
+  .app{
+    position:relative; z-index:1;
+    display:flex; flex-direction:column;
+    min-height:100vh;
+  }
+
+  header.top{
+    display:flex; align-items:center; justify-content:space-between;
+    gap: 16px;
+    padding: 22px clamp(16px, 3vw, 40px);
+    border-bottom: 1px solid var(--hairline);
+    backdrop-filter: blur(6px);
+  }
+
+  .wordmark{
+    display:flex; align-items:baseline; gap:10px;
+    font-family: var(--font-display);
+    font-weight:500;
+    font-size: clamp(20px, 2.4vw, 28px);
+    letter-spacing: 0.01em;
+    color: #f2f0fb;
+  }
+  .wordmark .spark{
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--gold);
+    transform: translateY(-6px);
+  }
+  .wordmark .sub{
+    display:block;
+    font-family: var(--font-mono);
+    font-weight:400;
+    font-size: 10.5px;
+    letter-spacing: 0.22em;
+    color: var(--mist-dim);
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .top-actions{ display:flex; gap:10px; }
+
+  .btn{
+    appearance:none; border:1px solid var(--hairline);
+    background: var(--void-2);
+    color: var(--mist);
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-size: 13px; font-weight:600;
+    letter-spacing: 0.01em;
+    cursor:pointer;
+    transition: border-color .18s ease, transform .18s ease, background .18s ease;
+    white-space:nowrap;
+  }
+  .btn:hover{ border-color: var(--violet); transform: translateY(-1px); }
+  .btn:focus-visible{ outline: 2px solid var(--teal); outline-offset:2px; }
+  .btn.primary{
+    background: linear-gradient(135deg, var(--violet), var(--teal));
+    color: #0b0e1a; border:none; font-weight:700;
+  }
+  .btn.primary:hover{ filter: brightness(1.08); }
+  .btn.ghost{ background:transparent; }
+
+  main.layout{
+    flex:1;
+    display:grid;
+    grid-template-columns: 168px minmax(0,1fr) 340px;
+    gap: 0;
+  }
+
+  /* ---------- left rail: presets ---------- */
+  aside.presets{
+    border-right: 1px solid var(--hairline);
+    padding: 22px 14px;
+    display:flex; flex-direction:column; gap:16px;
+    overflow-y:auto;
+  }
+  .rail-label{
+    font-family: var(--font-mono);
+    font-size: 10.5px; letter-spacing:0.18em; text-transform:uppercase;
+    color: var(--mist-dim);
+    padding: 0 4px;
+  }
+  .preset-card{
+    border:1px solid var(--hairline);
+    border-radius: 14px;
+    padding: 12px 10px;
+    cursor:pointer;
+    background: var(--void-2);
+    transition: border-color .2s ease, transform .2s ease;
+    text-align:left;
+  }
+  .preset-card:hover{ transform: translateY(-2px); }
+  .preset-card.active{ border-color: currentColor; box-shadow: 0 0 0 1px currentColor inset; }
+  .preset-swatch{
+    height: 46px; border-radius: 8px; margin-bottom: 8px;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .preset-name{ font-size: 12.5px; font-weight:600; color:#eceaf7; }
+  .preset-motif{ font-family: var(--font-mono); font-size: 10px; color: var(--mist-dim); text-transform:uppercase; letter-spacing:.06em; }
+
+  /* ---------- center stage ---------- */
+  .stage{
+    position:relative;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    padding: 30px 16px 40px;
+    gap: 18px;
+    min-height: 0;
+  }
+
+  .stage-hint{
+    font-family: var(--font-mono);
+    font-size: 11px; letter-spacing:0.14em; text-transform:uppercase;
+    color: var(--mist-dim);
+  }
+
+  .tilt-wrap{
+    perspective: 1600px;
+    touch-action: none;
+  }
+  .card-inner{
+    position:relative;
+    width: min(340px, 78vw);
+    aspect-ratio: 5 / 7;
+    transform-style: preserve-3d;
+    transition: transform .18s ease-out, box-shadow .3s ease;
+    will-change: transform;
+  }
+  .card-inner.flipped{ transform: rotateY(180deg) !important; }
+
+  .card-face{
+    position:absolute; inset:0;
+    border-radius: 18px;
+    overflow:hidden;
+    backface-visibility:hidden;
+    box-shadow:
+      0 30px 60px -20px rgba(0,0,0,0.6),
+      0 0 0 1px rgba(255,255,255,0.06);
+  }
+  .card-face.back{ transform: rotateY(180deg); }
+  .card-face canvas{ width:100%; height:100%; display:block; }
+
+  .glow{
+    position:absolute; inset:-40px;
+    z-index:-1;
+    filter: blur(38px);
+    opacity:0.55;
+    border-radius: 40px;
+    transition: background 0.4s ease;
+    pointer-events:none;
+  }
+
+  .stage-controls{
+    display:flex; gap:10px; align-items:center;
+  }
+
+  /* ---------- right panel: compose ---------- */
+  aside.compose{
+    border-left: 1px solid var(--hairline);
+    padding: 22px 22px 40px;
+    overflow-y:auto;
+    display:flex; flex-direction:column; gap: 22px;
+  }
+  .field{ display:flex; flex-direction:column; gap:8px; }
+  .field label{
+    font-family: var(--font-mono);
+    font-size: 10.5px; letter-spacing:0.14em; text-transform:uppercase;
+    color: var(--mist-dim);
+  }
+  .field input[type="text"],
+  .field textarea,
+  .field select{
+    background: var(--void-2);
+    border: 1px solid var(--hairline);
+    color: #f1efFB;
+    border-radius: 10px;
+    padding: 11px 13px;
+    font-size: 14px;
+    font-family: var(--font-body);
+    resize:none;
+  }
+  .field textarea{ min-height: 92px; line-height:1.5; }
+  .field input:focus, .field textarea:focus, .field select:focus{
+    outline: none; border-color: var(--violet);
+  }
+
+  .section-title{
+    font-family: var(--font-display);
+    font-size: 15px; font-weight:600; color:#f2f0fb;
+    margin: 0; padding-top: 4px;
+    border-top: 1px solid var(--hairline);
+    padding-top:18px;
+  }
+  .section-title.first{ border-top:none; padding-top:0; }
+
+  .swatch-row{ display:flex; flex-wrap:wrap; gap:9px; }
+  .swatch{
+    width: 30px; height:30px; border-radius:50%;
+    cursor:pointer; border:2px solid transparent;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.12);
+    transition: transform .15s ease, border-color .15s ease;
+  }
+  .swatch:hover{ transform: scale(1.12); }
+  .swatch.active{ border-color:#fff; }
+
+  .motif-row{ display:flex; flex-wrap:wrap; gap:8px; }
+  .motif-btn{
+    width:44px; height:44px; border-radius:10px;
+    border:1px solid var(--hairline);
+    background: var(--void-2);
+    color: var(--mist);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    transition: border-color .15s ease, transform .15s ease;
+  }
+  .motif-btn:hover{ transform: translateY(-1px); }
+  .motif-btn.active{ border-color: var(--teal); color: var(--teal); }
+  .motif-btn svg{ width:20px; height:20px; }
+
+  footer.meta{
+    padding: 6px 4px 0;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--mist-dim);
+    line-height:1.6;
+  }
+
+  /* scrollbars */
+  aside.presets::-webkit-scrollbar, aside.compose::-webkit-scrollbar{ width:8px; }
+  aside.presets::-webkit-scrollbar-thumb, aside.compose::-webkit-scrollbar-thumb{
+    background: var(--void-3); border-radius:8px;
+  }
+
+  /* ---------- responsive ---------- */
+  @media (max-width: 980px){
+    main.layout{ grid-template-columns: 1fr; }
+    aside.presets{
+      order:2; border-right:none; border-top:1px solid var(--hairline);
+      flex-direction:row; overflow-x:auto; overflow-y:visible;
+      padding: 16px;
+    }
+    aside.presets .rail-label{ display:none; }
+    .preset-card{ min-width:140px; }
+    .stage{ order:1; }
+    aside.compose{ order:3; border-left:none; border-top:1px solid var(--hairline); }
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .card-inner, .btn, .preset-card, .swatch, .motif-btn{ transition:none !important; }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+
+<div class="app">
+  <header class="top">
+    <div class="wordmark">
+      <span>Akasha Lohanch<span class="spark">✦</span></span>
+      <span class="sub" style="margin-left:2px;">card studio — sent from the ether</span>
+    </div>
+    <div class="top-actions">
+      <button class="btn ghost" id="copyBtn" type="button">Copy message</button>
+      <button class="btn primary" id="downloadBtn" type="button">Download card</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="presets">
+      <div class="rail-label">Presets</div>
+      <div id="presetList"></div>
+    </aside>
+
+    <section class="stage">
+      <div class="stage-hint">click the card to open it</div>
+      <div class="tilt-wrap" id="tiltWrap">
+        <div class="glow" id="cardGlow"></div>
+        <div class="card-inner" id="cardInner">
+          <div class="card-face front">
+            <canvas id="frontCanvas" width="1000" height="1400"></canvas>
+          </div>
+          <div class="card-face back">
+            <canvas id="backCanvas" width="1000" height="1400"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="stage-controls">
+        <button class="btn ghost" id="flipBtn" type="button">Open card</button>
+        <button class="btn ghost" id="bothBtn" type="button">Download both sides</button>
+      </div>
+    </section>
+
+    <aside class="compose">
+      <div class="field">
+        <h3 class="section-title first">Words</h3>
+      </div>
+      <div class="field">
+        <label for="kicker">A few words</label>
+        <input type="text" id="kicker" maxlength="40" value="Happy Birthday">
+      </div>
+      <div class="field">
+        <label for="title">Big headline</label>
+        <input type="text" id="title" maxlength="30" value="For Maya">
+      </div>
+      <div class="field">
+        <label for="message">Inside message</label>
+        <textarea id="message" maxlength="360">Wishing you a year that feels as wide open as the sky — full of quiet mornings, good company, and everything you're hoping for.</textarea>
+      </div>
+      <div class="field">
+        <label for="from">Signed</label>
+        <input type="text" id="from" maxlength="24" value="Ari">
+      </div>
+
+      <h3 class="section-title">Paper</h3>
+      <div class="swatch-row" id="paperSwatches"></div>
+
+      <h3 class="section-title">Accent</h3>
+      <div class="swatch-row" id="accentSwatches"></div>
+
+      <h3 class="section-title">Motif</h3>
+      <div class="motif-row" id="motifButtons"></div>
+
+      <h3 class="section-title">Typeface</h3>
+      <div class="field">
+        <select id="fontPair">
+          <option value="fraunces-manrope">Fraunces &amp; Manrope</option>
+          <option value="playfair-inter">Playfair Display &amp; Inter</option>
+          <option value="cormorant-mono">Cormorant &amp; Space Mono</option>
+        </select>
+      </div>
+
+      <footer class="meta">
+        Every card is drawn fresh in your browser — nothing is uploaded, nothing is saved.
+      </footer>
+    </aside>
+  </main>
+</div>
+
+<script>
+(() => {
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ============ ambient starfield ============ */
+  const starsCanvas = document.getElementById('stars');
+  const sctx = starsCanvas.getContext('2d');
+  let stars = [];
+  function sizeStars(){
+    starsCanvas.width = window.innerWidth;
+    starsCanvas.height = window.innerHeight;
+    const count = Math.floor((window.innerWidth * window.innerHeight) / 9000);
+    stars = Array.from({length: count}, () => ({
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      r: Math.random() * 1.2 + 0.3,
+      p: Math.random() * Math.PI * 2,
+      s: Math.random() * 0.015 + 0.005
+    }));
+  }
+  function drawStars(t){
+    sctx.clearRect(0,0,starsCanvas.width, starsCanvas.height);
+    for(const st of stars){
+      const tw = reduceMotion ? 0.6 : (Math.sin(st.p + t*st.s) * 0.5 + 0.5);
+      sctx.globalAlpha = 0.15 + tw * 0.55;
+      sctx.fillStyle = '#cfd3ec';
+      sctx.beginPath();
+      sctx.arc(st.x, st.y, st.r, 0, Math.PI*2);
+      sctx.fill();
+    }
+    sctx.globalAlpha = 1;
+    if(!reduceMotion) requestAnimationFrame(drawStars);
+  }
+  window.addEventListener('resize', sizeStars);
+  sizeStars();
+  requestAnimationFrame(drawStars);
+  if(reduceMotion) drawStars(0);
+
+  /* ============ state ============ */
+  const state = {
+    kicker: 'Happy Birthday',
+    title: 'For Maya',
+    message: 'Wishing you a year that feels as wide open as the sky — full of quiet mornings, good company, and everything you\'re hoping for.',
+    from: 'Ari',
+    paper: '#1b1b2f',
+    ink: '#f1eefb',
+    accent: '#8b7cf6',
+    motif: 'stars',
+    fontPair: 'fraunces-manrope',
+    flipped: false
+  };
+
+  const presets = [
+    { name:'Nebula',   paper:'#1b1b2f', ink:'#f1eefb', accent:'#8b7cf6', motif:'stars' },
+    { name:'Meadow',   paper:'#f3f1e4', ink:'#24301f', accent:'#4e7a51', motif:'botanical' },
+    { name:'Solstice', paper:'#fbf3dc', ink:'#3a2c12', accent:'#c99a3b', motif:'geometric' },
+    { name:'Tideline', paper:'#e8f2f1', ink:'#123331', accent:'#1e7f78', motif:'waves' },
+    { name:'Ember',    paper:'#2b1620', ink:'#f7e3da', accent:'#e8785b', motif:'hearts' },
+  ];
+
+  const paperOptions = ['#1b1b2f','#f3f1e4','#fbf3dc','#e8f2f1','#2b1620','#fafafa'];
+  const paperInk = {
+    '#1b1b2f':'#f1eefb', '#f3f1e4':'#24301f', '#fbf3dc':'#3a2c12',
+    '#e8f2f1':'#123331', '#2b1620':'#f7e3da', '#fafafa':'#20202a'
+  };
+  const accentOptions = ['#8b7cf6','#4e7a51','#c99a3b','#1e7f78','#e8785b','#2dd4bf'];
+
+  const fontPairs = {
+    'fraunces-manrope': { display: "'Fraunces', serif", body: "'Manrope', sans-serif", mono:"'JetBrains Mono', monospace", displayWeight:500 },
+    'playfair-inter':   { display: "'Playfair Display', serif", body: "'Inter', sans-serif", mono:"'JetBrains Mono', monospace", displayWeight:700 },
+    'cormorant-mono':   { display: "'Cormorant Garamond', serif", body: "'Space Mono', monospace", mono:"'Space Mono', monospace", displayWeight:600 },
+  };
+
+  const motifIcons = {
+    stars: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l1.8 4.7L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.3L12 3z"/><circle cx="18.5" cy="17" r="1.4"/><circle cx="5.5" cy="6" r="1"/></svg>',
+    botanical: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 21V6"/><path d="M12 9c0-3 2-5 5-5-0 3-2 5-5 5z"/><path d="M12 13c0-3-2-5-5-5 0 3 2 5 5 5z"/></svg>',
+    geometric: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.6"/><path d="M12 4v3.5M12 16.5V20M4 12h3.5M16.5 12H20"/></svg>',
+    waves: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 9c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2"/><path d="M3 15c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2"/></svg>',
+    hearts: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 20s-7-4.4-9.3-8.6C1.2 8.4 3 5 6.3 5c2 0 3.3 1.2 3.7 2 0.4-0.8 1.7-2 3.7-2 3.3 0 5.1 3.4 3.6 6.4C19 15.6 12 20 12 20z"/></svg>',
+  };
+
+  /* ============ build UI: presets, swatches, motifs ============ */
+  const presetList = document.getElementById('presetList');
+  presets.forEach((p, i) => {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'preset-card';
+    card.style.color = p.accent;
+    card.innerHTML = `
+      <div class="preset-swatch" style="background:${p.paper}"></div>
+      <div class="preset-name">${p.name}</div>
+      <div class="preset-motif">${p.motif}</div>
+    `;
+    card.addEventListener('click', () => {
+      state.paper = p.paper; state.ink = p.ink; state.accent = p.accent; state.motif = p.motif;
+      syncControls();
+      renderAll();
+    });
+    card.dataset.index = i;
+    presetList.appendChild(card);
+  });
+
+  const paperRow = document.getElementById('paperSwatches');
+  paperOptions.forEach(hex => {
+    const s = document.createElement('button');
+    s.type = 'button'; s.className = 'swatch'; s.style.background = hex;
+    s.addEventListener('click', () => {
+      state.paper = hex; state.ink = paperInk[hex] || '#222';
+      syncControls(); renderAll();
+    });
+    s.dataset.hex = hex;
+    paperRow.appendChild(s);
+  });
+
+  const accentRow = document.getElementById('accentSwatches');
+  accentOptions.forEach(hex => {
+    const s = document.createElement('button');
+    s.type = 'button'; s.className = 'swatch'; s.style.background = hex;
+    s.addEventListener('click', () => {
+      state.accent = hex;
+      syncControls(); renderAll();
+    });
+    s.dataset.hex = hex;
+    accentRow.appendChild(s);
+  });
+
+  const motifRow = document.getElementById('motifButtons');
+  Object.keys(motifIcons).forEach(key => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'motif-btn'; b.innerHTML = motifIcons[key];
+    b.title = key;
+    b.addEventListener('click', () => { state.motif = key; syncControls(); renderAll(); });
+    b.dataset.key = key;
+    motifRow.appendChild(b);
+  });
+
+  function syncControls(){
+    [...presetList.children].forEach((el, i) => {
+      const p = presets[i];
+      el.classList.toggle('active', p.paper === state.paper && p.accent === state.accent && p.motif === state.motif);
+    });
+    [...paperRow.children].forEach(el => el.classList.toggle('active', el.dataset.hex === state.paper));
+    [...accentRow.children].forEach(el => el.classList.toggle('active', el.dataset.hex === state.accent));
+    [...motifRow.children].forEach(el => el.classList.toggle('active', el.dataset.key === state.motif));
+    document.getElementById('cardGlow').style.background =
+      `radial-gradient(circle, ${state.accent}55, transparent 70%)`;
+  }
+
+  /* ============ text fields ============ */
+  const kickerEl = document.getElementById('kicker');
+  const titleEl = document.getElementById('title');
+  const messageEl = document.getElementById('message');
+  const fromEl = document.getElementById('from');
+  const fontSelect = document.getElementById('fontPair');
+
+  kickerEl.addEventListener('input', () => { state.kicker = kickerEl.value; renderAll(); });
+  titleEl.addEventListener('input', () => { state.title = titleEl.value; renderAll(); });
+  messageEl.addEventListener('input', () => { state.message = messageEl.value; renderAll(); });
+  fromEl.addEventListener('input', () => { state.from = fromEl.value; renderAll(); });
+  fontSelect.addEventListener('change', async () => {
+    state.fontPair = fontSelect.value;
+    await preloadFonts();
+    renderAll();
+  });
+
+  async function preloadFonts(){
+    const fp = fontPairs[state.fontPair];
+    try{
+      await Promise.all([
+        document.fonts.load(`500 40px ${fp.display}`),
+        document.fonts.load(`700 40px ${fp.display}`),
+        document.fonts.load(`400 20px ${fp.body}`),
+        document.fonts.load(`600 20px ${fp.body}`),
+        document.fonts.load(`400 20px ${fp.mono}`),
+      ]);
+    }catch(e){ /* ignore font load races */ }
+  }
+
+  /* ============ canvas drawing ============ */
+  const frontCanvas = document.getElementById('frontCanvas');
+  const backCanvas = document.getElementById('backCanvas');
+  const fctx = frontCanvas.getContext('2d');
+  const bctx = backCanvas.getContext('2d');
+  const W = 1000, H = 1400;
+
+  function wrapLines(ctx, text, maxWidth){
+    const words = text.split(/\s+/).filter(Boolean);
+    const lines = [];
+    let line = '';
+    for(const w of words){
+      const test = line ? line + ' ' + w : w;
+      if(ctx.measureText(test).width > maxWidth && line){
+        lines.push(line);
+        line = w;
+      } else {
+        line = test;
+      }
+    }
+    if(line) lines.push(line);
+    return lines;
+  }
+
+  function drawCornerMotif(ctx, type, color, mirrored){
+    ctx.save();
+    if(mirrored){ ctx.translate(W, H); ctx.rotate(Math.PI); }
+    ctx.translate(58, 58);
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = 2.4;
+    ctx.globalAlpha = 0.85;
+
+    if(type === 'stars'){
+      const pts = [[0,0],[34,10],[16,34],[46,44]];
+      pts.forEach(([x,y], i) => {
+        const r = i === 0 ? 7 : 3.4;
+        drawStarShape(ctx, x, y, r, r*0.45, 5);
+      });
+    } else if(type === 'botanical'){
+      ctx.beginPath();
+      ctx.moveTo(0, 60); ctx.quadraticCurveTo(6, 20, 34, 4);
+      ctx.stroke();
+      [[10,44],[18,28],[26,14]].forEach(([x,y]) => {
+        ctx.beginPath();
+        ctx.ellipse(x, y, 10, 5, -0.6, 0, Math.PI*2);
+        ctx.fill();
+      });
+    } else if(type === 'geometric'){
+      ctx.beginPath(); ctx.arc(20,20,20,0,Math.PI*2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(20,20,9,0,Math.PI*2); ctx.stroke();
+      [0,90,180,270].forEach(a => {
+        const rad = a*Math.PI/180;
+        ctx.beginPath();
+        ctx.moveTo(20+Math.cos(rad)*24, 20+Math.sin(rad)*24);
+        ctx.lineTo(20+Math.cos(rad)*34, 20+Math.sin(rad)*34);
+        ctx.stroke();
+      });
+    } else if(type === 'waves'){
+      for(let row=0; row<3; row++){
+        ctx.beginPath();
+        for(let x=0; x<=50; x+=2){
+          const y = row*16 + Math.sin(x/8)*6 + 10;
+          if(x===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+        }
+        ctx.stroke();
+      }
+    } else if(type === 'hearts'){
+      [[10,10,1],[30,26,0.6]].forEach(([x,y,scale]) => {
+        ctx.save();
+        ctx.translate(x,y); ctx.scale(scale,scale);
+        ctx.beginPath();
+        ctx.moveTo(0, 6);
+        ctx.bezierCurveTo(-10,-6, -22,4, 0,18);
+        ctx.bezierCurveTo(22,4, 10,-6, 0,6);
+        ctx.fill();
+        ctx.restore();
+      });
+    }
+    ctx.restore();
+  }
+
+  function drawStarShape(ctx, cx, cy, outerR, innerR, points){
+    ctx.beginPath();
+    for(let i=0; i<points*2; i++){
+      const r = i % 2 === 0 ? outerR : innerR;
+      const a = (Math.PI/points) * i - Math.PI/2;
+      const x = cx + Math.cos(a)*r, y = cy + Math.sin(a)*r;
+      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function paperTexture(ctx, base){
+    ctx.fillStyle = base;
+    ctx.fillRect(0,0,W,H);
+    // soft vignette
+    const grad = ctx.createRadialGradient(W/2,H*0.42,H*0.1, W/2,H*0.5,H*0.75);
+    grad.addColorStop(0, 'rgba(255,255,255,0)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.10)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0,0,W,H);
+  }
+
+  function drawFrame(ctx, color){
+    ctx.strokeStyle = color;
+    ctx.globalAlpha = 0.55;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(34, 34, W-68, H-68);
+    ctx.globalAlpha = 1;
+  }
+
+  function drawFront(){
+    const fp = fontPairs[state.fontPair];
+    fctx.clearRect(0,0,W,H);
+    paperTexture(fctx, state.paper);
+    drawFrame(fctx, state.accent);
+    drawCornerMotif(fctx, state.motif, state.accent, false);
+    drawCornerMotif(fctx, state.motif, state.accent, true);
+
+    // kicker
+    fctx.textAlign = 'center';
+    fctx.fillStyle = state.accent;
+    fctx.font = `500 26px ${fp.mono}`;
+    fctx.save();
+    fctx.letterSpacing = '6px';
+    fctx.fillText(state.kicker.toUpperCase(), W/2 + 10, H*0.40);
+    fctx.restore();
+
+    // title
+    fctx.fillStyle = state.ink;
+    let size = 100;
+    fctx.font = `${fp.displayWeight} ${size}px ${fp.display}`;
+    let lines = wrapLines(fctx, state.title, W*0.74);
+    while(lines.length > 2 && size > 48){
+      size -= 6;
+      fctx.font = `${fp.displayWeight} ${size}px ${fp.display}`;
+      lines = wrapLines(fctx, state.title, W*0.74);
+    }
+    const lh = size * 1.12;
+    const startY = H*0.5 - ((lines.length-1)*lh)/2;
+    lines.forEach((line, i) => {
+      fctx.fillText(line, W/2, startY + i*lh);
+    });
+
+    // brand mark
+    fctx.font = `400 18px ${fp.mono}`;
+    fctx.fillStyle = state.ink;
+    fctx.globalAlpha = 0.45;
+    fctx.save();
+    fctx.letterSpacing = '3px';
+    fctx.fillText('AKASHA LOHANCH', W/2, H*0.92);
+    fctx.restore();
+    fctx.globalAlpha = 1;
+  }
+
+  function drawBack(){
+    const fp = fontPairs[state.fontPair];
+    bctx.clearRect(0,0,W,H);
+    paperTexture(bctx, state.paper);
+    drawFrame(bctx, state.accent);
+    drawCornerMotif(bctx, state.motif, state.accent, false);
+
+    bctx.textAlign = 'left';
+    bctx.fillStyle = state.accent;
+    bctx.font = `500 22px ${fp.mono}`;
+    bctx.save();
+    bctx.letterSpacing = '4px';
+    bctx.fillText('A TRANSMISSION', 110, 190);
+    bctx.restore();
+
+    bctx.fillStyle = state.ink;
+    bctx.font = `400 44px ${fp.body}`;
+    const lines = wrapLines(bctx, state.message, W - 220);
+    const lh = 62;
+    let y = 300;
+    // vertical centering within available space
+    const blockHeight = lines.length * lh;
+    const areaTop = 260, areaBottom = H - 260;
+    y = areaTop + Math.max(0, ((areaBottom-areaTop) - blockHeight)/2) + lh*0.6;
+    lines.forEach(line => { bctx.fillText(line, 110, y); y += lh; });
+
+    bctx.textAlign = 'right';
+    bctx.fillStyle = state.accent;
+    bctx.font = `${fp.displayWeight} 46px ${fp.display}`;
+    bctx.fillText('— ' + (state.from || ''), W-110, H-160);
+  }
+
+  async function renderAll(){
+    await preloadFonts();
+    drawFront();
+    drawBack();
+  }
+
+  /* ============ presets init ============ */
+  function applyInitialPreset(){
+    const p = presets[0];
+    state.paper = p.paper; state.ink = p.ink; state.accent = p.accent; state.motif = p.motif;
+  }
+  applyInitialPreset();
+  syncControls();
+  renderAll();
+
+  /* ============ flip + tilt interactions ============ */
+  const cardInner = document.getElementById('cardInner');
+  const tiltWrap = document.getElementById('tiltWrap');
+  const flipBtn = document.getElementById('flipBtn');
+
+  function toggleFlip(){
+    state.flipped = !state.flipped;
+    cardInner.classList.toggle('flipped', state.flipped);
+    flipBtn.textContent = state.flipped ? 'Close card' : 'Open card';
+  }
+  flipBtn.addEventListener('click', toggleFlip);
+  cardInner.addEventListener('click', toggleFlip);
+
+  if(!reduceMotion){
+    let raf = null;
+    tiltWrap.addEventListener('pointermove', (e) => {
+      const rect = tiltWrap.getBoundingClientRect();
+      const px = (e.clientX - rect.left) / rect.width - 0.5;
+      const py = (e.clientY - rect.top) / rect.height - 0.5;
+      if(raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const base = state.flipped ? 'rotateY(180deg)' : '';
+        const tiltX = (py * -10).toFixed(2);
+        const tiltY = (px * 12).toFixed(2);
+        cardInner.style.transform = state.flipped
+          ? `rotateY(${180 - px*12}deg) rotateX(${py*-10}deg)`
+          : `rotateY(${tiltY}deg) rotateX(${tiltX}deg)`;
+      });
+    });
+    tiltWrap.addEventListener('pointerleave', () => {
+      cardInner.style.transform = state.flipped ? 'rotateY(180deg)' : '';
+    });
+  }
+
+  /* ============ download ============ */
+  function download(canvas, filename){
+    const link = document.createElement('a');
+    link.download = filename;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  }
+
+  document.getElementById('downloadBtn').addEventListener('click', () => {
+    const target = state.flipped ? backCanvas : frontCanvas;
+    const label = state.flipped ? 'inside' : 'front';
+    download(target, `akasha-lohanch-${label}.png`);
+  });
+
+  document.getElementById('bothBtn').addEventListener('click', () => {
+    const gap = 40;
+    const combo = document.createElement('canvas');
+    combo.width = W;
+    combo.height = H*2 + gap;
+    const cctx = combo.getContext('2d');
+    cctx.fillStyle = '#0b0e1a';
+    cctx.fillRect(0,0,combo.width, combo.height);
+    cctx.drawImage(frontCanvas, 0, 0);
+    cctx.drawImage(backCanvas, 0, H+gap);
+    download(combo, 'akasha-lohanch-card.png');
+  });
+
+  document.getElementById('copyBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('copyBtn');
+    try{
+      await navigator.clipboard.writeText(`${state.kicker}\n${state.title}\n\n${state.message}\n\n— ${state.from}`);
+      const original = btn.textContent;
+      btn.textContent = 'Copied ✓';
+      setTimeout(() => { btn.textContent = original; }, 1600);
+    }catch(e){
+      btn.textContent = 'Press ⌘/Ctrl+C';
+    }
+  });
+
+})();
+</script>
+</body>
+</html>
